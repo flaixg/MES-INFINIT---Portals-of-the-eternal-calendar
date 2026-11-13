@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MES INFINIT — Portals of the Eternal Calendar</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Exo+2:wght@400;600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    overflow: hidden;
+    font-family: 'Exo 2', sans-serif;
+    color: #fff;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  #gameCanvas {
+    display: block;
+    background: #000;
+    cursor: crosshair;
+  }
+
+  #ui {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  #titleScreen, #gameOverScreen {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: radial-gradient(ellipse at center, #0a0520 0%, #000 70%);
+    z-index: 20;
+    pointer-events: auto;
+    transition: opacity 0.6s ease;
+  }
+
+  #titleScreen h1 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: clamp(2.8rem, 8vw, 5.5rem);
+    font-weight: 900;
+    background: linear-gradient(135deg, #ff6b00, #ff00cc, #00f0ff, #ffcc00);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientShift 4s ease infinite;
+    text-shadow: 0 0 40px rgba(255,100,0,0.5);
+    letter-spacing: 4px;
+    margin-bottom: 0.3em;
+  }
+
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  #titleScreen .subtitle {
+    font-size: 1.3rem;
+    color: #aaa;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    margin-bottom: 1.8rem;
+  }
+
+  .btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    padding: 16px 48px;
+    border: 2px solid #ff6b00;
+    background: rgba(255, 80, 0, 0.15);
+    color: #ff9a4d;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    pointer-events: auto;
+  }
+
+  .btn:hover {
+    background: rgba(255, 100, 0, 0.4);
+    box-shadow: 0 0 30px rgba(255,100,0,0.6), inset 0 0 20px rgba(255,150,0,0.2);
+    transform: scale(1.05);
+    color: #fff;
+  }
+
+  #langSelector {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    display: flex;
+    gap: 8px;
+    z-index: 30;
+    pointer-events: auto;
+  }
+
+  .lang-btn {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 6px 12px;
+    border: 1px solid rgba(255,150,0,0.4);
+    background: rgba(0,0,0,0.5);
+    color: #aaa;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    letter-spacing: 1px;
+  }
+
+  .lang-btn:hover {
+    border-color: #ff9a4d;
+    color: #ff9a4d;
+  }
+
+  .lang-btn.active {
+    background: rgba(255,100,0,0.25);
+    border-color: #ff6b00;
+    color: #ffcc00;
+    box-shadow: 0 0 12px rgba(255,100,0,0.4);
+  }
+
+  #hud {
+    position: absolute;
+    top: 20px;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 0 30px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  #hud.visible { opacity: 1; }
+
+  .hud-box {
+    background: rgba(0,0,0,0.55);
+    border: 1px solid rgba(255,150,0,0.4);
+    padding: 10px 22px;
+    border-radius: 12px;
+    backdrop-filter: blur(8px);
+  }
+
+  #dayLabel {
+    color: #00f0ff;
+    font-weight: 700;
+  }
+
+  #scoreLabel {
+    color: #ffcc00;
+  }
+
+  #instructions {
+    position: absolute;
+    bottom: 25px;
+    width: 100%;
+    text-align: center;
+    font-size: 0.95rem;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 1px;
+    z-index: 15;
+    opacity: 0;
+    transition: opacity 0.4s;
+  }
+
+  #instructions.visible { opacity: 1; }
+
+  #gameOverScreen h2 {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 3rem;
+    color: #ff3366;
+    margin-bottom: 0.5rem;
+    text-shadow: 0 0 20px #ff3366;
+  }
+
+  #finalScore {
+    font-size: 1.6rem;
+    color: #ffcc00;
+    margin-bottom: 2rem;
+  }
+
+  .hidden { display: none !important; }
+
+  #controlsHint {
+    margin-top: 2rem;
+    color: #666;
+    font-size: 0.9rem;
+    text-align: center;
+    max-width: 90%;
+  }
+
+  .credit {
+    margin-top: 2.2rem;
+    font-size: 0.85rem;
+    color: #555;
+    letter-spacing: 1px;
+  }
+
+  .credit a {
+    color: #ff9a4d;
+    text-decoration: none;
+    transition: color 0.25s, text-shadow 0.25s;
+    pointer-events: auto;
+  }
+
+  .credit a:hover {
+    color: #ffcc00;
+    text-shadow: 0 0 12px rgba(255, 150, 0, 0.6);
+  }
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui">
+  <!-- Language selector (always visible) -->
+  <div id="langSelector">
+    <button class="lang-btn active" data-lang="en">EN</button>
+    <button class="lang-btn" data-lang="ca">CA</button>
+    <button class="lang-btn" data-lang="es">ES</button>
+    <button class="lang-btn" data-lang="fr">FR</button>
+  </div>
+
+  <div id="titleScreen">
+    <h1>MES INFINIT</h1>
+    <div class="subtitle" id="subtitle">Portals of the Eternal Calendar</div>
+    <button class="btn" id="startBtn">START JOURNEY</button>
+    <p id="controlsHint">
+      Move with ↑ ↓ ← → or WASD · Enter portals · Avoid the voids
+    </p>
+    <div class="credit">Created by <a href="https://github.com/flaixg" target="_blank" rel="noopener">flaixg</a></div>
+  </div>
+
+  <div id="hud">
+    <div class="hud-box"><span id="dayText">DAY</span> <span id="dayLabel">01</span></div>
+    <div class="hud-box"><span id="scoreText">SCORE</span> <span id="scoreLabel">0</span></div>
+  </div>
+
+  <div id="instructions">
+    Enter the colored portals to change worlds and gain energy
+  </div>
+
+  <div id="gameOverScreen" class="hidden">
+    <h2 id="gameOverTitle">END OF CYCLE</h2>
+    <div id="finalScore">Final score: 0</div>
+    <button class="btn" id="restartBtn">PLAY AGAIN</button>
+    <div class="credit">Created by <a href="https://github.com/flaixg" target="_blank" rel="noopener">flaixg</a></div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let W, H;
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ============== TRANSLATIONS ==============
+const translations = {
+  en: {
+    subtitle: "Portals of the Eternal Calendar",
+    start: "START JOURNEY",
+    controls: "Move with ↑ ↓ ← → or WASD · Enter portals · Avoid the voids",
+    day: "DAY",
+    score: "SCORE",
+    instructions: "Enter the colored portals to change worlds and gain energy",
+    gameOver: "END OF CYCLE",
+    finalScore: "Final score",
+    restart: "PLAY AGAIN"
+  },
+  ca: {
+    subtitle: "Portals del Calendari Etern",
+    start: "INICIA EL VIATGE",
+    controls: "Mou-te amb ↑ ↓ ← → o WASD · Entra als portals · Evita els buits",
+    day: "DIA",
+    score: "PUNTUACIÓ",
+    instructions: "Entra als portals de colors per canviar de món i guanyar energia",
+    gameOver: "FI DEL CICLE",
+    finalScore: "Puntuació final",
+    restart: "TORNA A COMENÇAR"
+  },
+  es: {
+    subtitle: "Portales del Calendario Eterno",
+    start: "INICIA EL VIAJE",
+    controls: "Muévete con ↑ ↓ ← → o WASD · Entra en los portales · Evita los vacíos",
+    day: "DÍA",
+    score: "PUNTUACIÓN",
+    instructions: "Entra en los portales de colores para cambiar de mundo y ganar energía",
+    gameOver: "FIN DEL CICLO",
+    finalScore: "Puntuación final",
+    restart: "JUGAR DE NUEVO"
+  },
+  fr: {
+    subtitle: "Portails du Calendrier Éternel",
+    start: "COMMENCER LE VOYAGE",
+    controls: "Déplace-toi avec ↑ ↓ ← → ou WASD · Entre dans les portails · Évite les vides",
+    day: "JOUR",
+    score: "SCORE",
+    instructions: "Entre dans les portails colorés pour changer de monde et gagner de l'énergie",
+    gameOver: "FIN DU CYCLE",
+    finalScore: "Score final",
+    restart: "REJOUER"
+  }
+};
+
+let currentLang = localStorage.getItem('mesInfinitLang') || 'en';
+
+// ============== STATE ==============
+let gameState = 'title'; // title | playing | gameover
+let score = 0;
+let currentDay = 1;
+let frame = 0;
+let keys = {};
+
+function setLanguage(lang) {
+  if (!translations[lang]) return;
+  currentLang = lang;
+  localStorage.setItem('mesInfinitLang', lang);
+
+  const t = translations[lang];
+
+  // Update buttons
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === lang);
+  });
+
+  // Title screen
+  document.getElementById('subtitle').textContent = t.subtitle;
+  document.getElementById('startBtn').textContent = t.start;
+  document.getElementById('controlsHint').textContent = t.controls;
+
+  // HUD
+  document.getElementById('dayText').textContent = t.day;
+  document.getElementById('scoreText').textContent = t.score;
+
+  // Instructions
+  document.getElementById('instructions').textContent = t.instructions;
+
+  // Game over
+  document.getElementById('gameOverTitle').textContent = t.gameOver;
+  document.getElementById('restartBtn').textContent = t.restart;
+
+  // Update final score if visible
+  if (gameState === 'gameover') {
+    document.getElementById('finalScore').textContent = `${t.finalScore}: ${score}`;
+  }
+
+  // HTML lang attribute
+  document.documentElement.lang = lang;
+}
+
+// Language buttons
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => setLanguage(btn.dataset.lang));
+});
+
+// Apply saved / default language on load
+setLanguage(currentLang);
+
+// Player
+const player = {
+  x: 0, y: 0,
+  vx: 0, vy: 0,
+  radius: 18,
+  speed: 6.5,
+  trail: []
+};
+
+// Particles & entities
+let stars = [];
+let portals = [];
+let voids = [];
+let particles = [];
+
+// Themes for different day types
+const themes = [
+  { name: 'Cyberpunk', bg: ['#0a0015','#1a0030'], accent: '#ff00cc', portal: '#ff00aa' },
+  { name: 'Ocean',    bg: ['#001020','#003040'], accent: '#00e0ff', portal: '#00c8ff' },
+  { name: 'Bloom',    bg: ['#150020','#300040'], accent: '#ff66cc', portal: '#ff99dd' },
+  { name: 'Volcano',  bg: ['#1a0500','#300a00'], accent: '#ff6600', portal: '#ff4400' }
+];
+let currentTheme = themes[0];
+
+// ============== INPUT ==============
+window.addEventListener('keydown', e => {
+  keys[e.key.toLowerCase()] = true;
+  if (['arrowup','arrowdown','arrowleft','arrowright',' '].includes(e.key.toLowerCase())) e.preventDefault();
+});
+window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+
+document.getElementById('startBtn').onclick = startGame;
+document.getElementById('restartBtn').onclick = startGame;
+
+// ============== INIT ==============
+function initStars() {
+  stars = [];
+  for (let i = 0; i < 180; i++) {
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      size: Math.random() * 2.2 + 0.3,
+      speed: Math.random() * 0.4 + 0.1,
+      alpha: Math.random() * 0.7 + 0.3
+    });
+  }
+}
+
+function spawnPortal() {
+  const side = Math.floor(Math.random() * 4);
+  let x, y;
+  if (side === 0) { x = Math.random() * W; y = -60; }
+  else if (side === 1) { x = W + 60; y = Math.random() * H; }
+  else if (side === 2) { x = Math.random() * W; y = H + 60; }
+  else { x = -60; y = Math.random() * H; }
+
+  const themeIdx = Math.floor(Math.random() * themes.length);
+  portals.push({
+    x, y,
+    vx: (Math.random() - 0.5) * 1.8,
+    vy: (Math.random() - 0.5) * 1.8,
+    radius: 42 + Math.random() * 18,
+    themeIdx,
+    life: 900 + Math.random() * 400,
+    pulse: Math.random() * Math.PI * 2,
+    day: Math.floor(Math.random() * 28) + 1
+  });
+}
+
+function spawnVoid() {
+  voids.push({
+    x: Math.random() * W,
+    y: Math.random() * H,
+    radius: 25 + Math.random() * 35,
+    vx: (Math.random() - 0.5) * 1.2,
+    vy: (Math.random() - 0.5) * 1.2,
+    life: 600 + Math.random() * 300
+  });
+}
+
+function startGame() {
+  gameState = 'playing';
+  score = 0;
+  currentDay = 1;
+  frame = 0;
+  player.x = W / 2;
+  player.y = H / 2;
+  player.vx = 0;
+  player.vy = 0;
+  player.trail = [];
+  portals = [];
+  voids = [];
+  particles = [];
+  currentTheme = themes[0];
+
+  document.getElementById('titleScreen').classList.add('hidden');
+  document.getElementById('gameOverScreen').classList.add('hidden');
+  document.getElementById('hud').classList.add('visible');
+  document.getElementById('instructions').classList.add('visible');
+
+  initStars();
+  for (let i = 0; i < 4; i++) spawnPortal();
+  for (let i = 0; i < 3; i++) spawnVoid();
+}
+
+function gameOver() {
+  gameState = 'gameover';
+  const t = translations[currentLang];
+  document.getElementById('finalScore').textContent = `${t.finalScore}: ${score}`;
+  document.getElementById('gameOverScreen').classList.remove('hidden');
+  document.getElementById('hud').classList.remove('visible');
+  document.getElementById('instructions').classList.remove('visible');
+}
+
+// ============== PARTICLES ==============
+function addParticle(x, y, color, count = 12) {
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 2;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 40 + Math.random() * 30,
+      maxLife: 70,
+      size: Math.random() * 4 + 2,
+      color
+    });
+  }
+}
+
+// ============== UPDATE ==============
+function update() {
+  if (gameState !== 'playing') return;
+  frame++;
+
+  // Movement
+  let dx = 0, dy = 0;
+  if (keys['arrowup'] || keys['w']) dy -= 1;
+  if (keys['arrowdown'] || keys['s']) dy += 1;
+  if (keys['arrowleft'] || keys['a']) dx -= 1;
+  if (keys['arrowright'] || keys['d']) dx += 1;
+
+  if (dx || dy) {
+    const len = Math.sqrt(dx*dx + dy*dy);
+    player.vx += (dx / len) * 0.9;
+    player.vy += (dy / len) * 0.9;
+  }
+
+  player.vx *= 0.92;
+  player.vy *= 0.92;
+  player.x += player.vx;
+  player.y += player.vy;
+
+  // Boundaries
+  player.x = Math.max(player.radius, Math.min(W - player.radius, player.x));
+  player.y = Math.max(player.radius, Math.min(H - player.radius, player.y));
+
+  // Trail
+  player.trail.unshift({ x: player.x, y: player.y });
+  if (player.trail.length > 18) player.trail.pop();
+
+  // Stars
+  stars.forEach(s => {
+    s.y += s.speed;
+    if (s.y > H) { s.y = 0; s.x = Math.random() * W; }
+  });
+
+  // Portals
+  portals.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.pulse += 0.07;
+    p.life--;
+
+    // Soft bounce
+    if (p.x < -80 || p.x > W + 80) p.vx *= -1;
+    if (p.y < -80 || p.y > H + 80) p.vy *= -1;
+
+    // Collision with player
+    const dist = Math.hypot(player.x - p.x, player.y - p.y);
+    if (dist < player.radius + p.radius * 0.7) {
+      score += 100 + Math.floor(p.radius);
+      currentDay = p.day;
+      currentTheme = themes[p.themeIdx];
+      addParticle(p.x, p.y, p.themeIdx === 0 ? '#ff00cc' : p.themeIdx === 1 ? '#00e0ff' : p.themeIdx === 2 ? '#ff66cc' : '#ff6600', 25);
+      p.life = 0;
+      if (Math.random() > 0.3) spawnPortal();
+    }
+  });
+  portals = portals.filter(p => p.life > 0);
+
+  // Voids (dangerous)
+  voids.forEach(v => {
+    v.x += v.vx;
+    v.y += v.vy;
+    v.life--;
+    if (v.x < 0 || v.x > W) v.vx *= -1;
+    if (v.y < 0 || v.y > H) v.vy *= -1;
+
+    const dist = Math.hypot(player.x - v.x, player.y - v.y);
+    if (dist < player.radius + v.radius * 0.6) {
+      addParticle(player.x, player.y, '#ff2244', 30);
+      gameOver();
+    }
+  });
+  voids = voids.filter(v => v.life > 0);
+
+  // Keep some portals and voids alive
+  if (portals.length < 3 && frame % 90 === 0) spawnPortal();
+  if (voids.length < 4 && frame % 120 === 0) spawnVoid();
+
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vx *= 0.96;
+    p.vy *= 0.96;
+    p.life--;
+  });
+  particles = particles.filter(p => p.life > 0);
+
+  // Update HUD
+  document.getElementById('dayLabel').textContent = String(currentDay).padStart(2, '0');
+  document.getElementById('scoreLabel').textContent = score;
+}
+
+// ============== DRAW ==============
+function drawBackground() {
+  const grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, Math.max(W,H)*0.8);
+  grad.addColorStop(0, currentTheme.bg[1]);
+  grad.addColorStop(1, currentTheme.bg[0]);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  stars.forEach(s => {
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${s.alpha})`;
+    ctx.fill();
+  });
+}
+
+function drawPhoenix() {
+  const cx = W * 0.5;
+  const cy = H * 0.22;
+  const t = frame * 0.02;
+
+  ctx.save();
+  ctx.globalAlpha = 0.18 + Math.sin(t) * 0.05;
+  ctx.translate(cx, cy);
+  ctx.scale(1.1 + Math.sin(t*0.7)*0.05, 1.1 + Math.sin(t*0.7)*0.05);
+
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 90, 50, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#ff6600';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(-40, -10);
+  ctx.quadraticCurveTo(-180, -80 + Math.sin(t)*20, -220, 30);
+  ctx.quadraticCurveTo(-100, 20, -30, 25);
+  ctx.fillStyle = '#ff9900';
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(40, -10);
+  ctx.quadraticCurveTo(180, -80 + Math.sin(t+1)*20, 220, 30);
+  ctx.quadraticCurveTo(100, 20, 30, 25);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(0, -55, 22, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffcc00';
+  ctx.fill();
+
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function drawPortal(p) {
+  const theme = themes[p.themeIdx];
+  const pulse = 1 + Math.sin(p.pulse) * 0.12;
+  const r = p.radius * pulse;
+
+  const glow = ctx.createRadialGradient(p.x, p.y, r*0.3, p.x, p.y, r*1.6);
+  glow.addColorStop(0, theme.portal + 'aa');
+  glow.addColorStop(0.5, theme.portal + '33');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r * 1.6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+  ctx.strokeStyle = theme.portal;
+  ctx.lineWidth = 4;
+  ctx.shadowColor = theme.portal;
+  ctx.shadowBlur = 25;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, r * 0.55, 0, Math.PI * 2);
+  ctx.fillStyle = theme.portal + '44';
+  ctx.fill();
+
+  ctx.font = `bold ${Math.floor(r*0.45)}px Orbitron`;
+  ctx.fillStyle = '#fff';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(p.day, p.x, p.y);
+}
+
+function drawVoid(v) {
+  const pulse = 1 + Math.sin(frame * 0.08 + v.x) * 0.15;
+  const r = v.radius * pulse;
+
+  const grad = ctx.createRadialGradient(v.x, v.y, 0, v.x, v.y, r);
+  grad.addColorStop(0, '#110011');
+  grad.addColorStop(0.6, '#330022');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(v.x, v.y, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(v.x, v.y, r * 0.7, 0, Math.PI * 2);
+  ctx.strokeStyle = '#ff224466';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawPlayer() {
+  player.trail.forEach((t, i) => {
+    const alpha = (1 - i / player.trail.length) * 0.4;
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, player.radius * (1 - i / 30), 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255, 180, 50, ${alpha})`;
+    ctx.fill();
+  });
+
+  const glow = ctx.createRadialGradient(player.x, player.y, 0, player.x, player.y, player.radius * 2.8);
+  glow.addColorStop(0, currentTheme.accent + 'cc');
+  glow.addColorStop(0.4, currentTheme.accent + '55');
+  glow.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius * 2.8, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+  ctx.fillStyle = '#fff8e0';
+  ctx.shadowColor = currentTheme.accent;
+  ctx.shadowBlur = 20;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  ctx.arc(player.x, player.y, player.radius * 0.45, 0, Math.PI * 2);
+  ctx.fillStyle = currentTheme.accent;
+  ctx.fill();
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    const alpha = p.life / p.maxLife;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * alpha, 0, Math.PI * 2);
+    ctx.fillStyle = p.color + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+    ctx.fill();
+  });
+}
+
+function draw() {
+  drawBackground();
+  drawPhoenix();
+
+  if (gameState === 'playing' || gameState === 'gameover') {
+    voids.forEach(drawVoid);
+    portals.forEach(drawPortal);
+    drawParticles();
+    drawPlayer();
+  }
+}
+
+// ============== LOOP ==============
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
+
+// Initial stars for title screen
+initStars();
+</script>
+</body>
+</html>
